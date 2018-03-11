@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:unless="ant:unless" xmlns:if="ant:if">
+
+	<!--
+		Installs Eclipse features with the p2 director.
+		Supports feature upgrade too.
+	
+		Parameters:
+		* eclipse.home: Eclipse location.
+		* eclipse.repositories: URLs of p2 repositories, separated with a comma, without space.
+		* eclipse.features: names of the features to install, separated with a comma, without space.
+		* perform.update: if "true", then it uninstalls the features before installing it again (upgrade)
+		* log.file.name: the suffix for the log file name.
+	-->
+	<target name="install-plugins">
+		<first id="launcher.jar.location">
+			<fileset dir="${eclipse.home}/plugins" includes="org.eclipse.equinox.launcher_*.jar" />
+		</first>
+		
+		<echo message="Installation de ${eclipse.features}" />
+		<echo message="Depuis ${eclipse.repositories}" />
+		<echo message="Une mise à jour de la feature sera effectuée" if:true="${perform.update}" />
+
+		<java 
+				dir="${eclipse.home}"
+				fork="true" 
+				jar="${toString:launcher.jar.location}" 
+				output="${eclipse.home}/../${log.file.name}.txt"
+				logError="true"
+				failonerror="true">
+			
+			<jvmarg line="-Xms256M -Xmx768M" />
+	
+			<arg value="-application" />
+			<arg value="org.eclipse.equinox.p2.director" />
+			
+			<arg value="-repository" />
+			<arg value="${eclipse.repositories}" />
+			
+			<arg value="-uninstallIU" if:true="${perform.update}" />
+			<arg value="${eclipse.features}" if:true="${perform.update}" />
+			
+			<arg value="-installIU" />
+			<arg value="${eclipse.features}" />
+			
+			<arg value="-consoleLog" />
+			<arg value="-noSplash" />
+			
+			<arg value="-data" />
+			<arg value="@noDefault" />
+		</java>
+	</target>
+ 
+</project>

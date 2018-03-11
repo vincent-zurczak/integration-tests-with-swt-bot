@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="test-application"
+         point="org.eclipse.core.runtime.applications">
+      <application
+            cardinality="singleton-global"
+            visible="true">
+         <run
+               class="net.vzurczak.eclipse.tests.installer.setup.CustomSwtBotApplication">
+         </run>
+      </application>
+   </extension>
+
+</plugin>

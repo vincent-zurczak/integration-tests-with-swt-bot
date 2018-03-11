@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature id="net.vzurczak.eclipse.tests.installer.feature" version="1.0.0.qualifier">
+      <category name="Tets"/>
+   </feature>
+   <feature id="net.vzurczak.eclipse.tests.ide.feature" version="1.0.0.qualifier">
+      <category name="Tets"/>
+   </feature>
+   <category-def name="Tests" label="Tests"/>
+</site>

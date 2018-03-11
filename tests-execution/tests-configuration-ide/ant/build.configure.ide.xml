@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:unless="ant:unless" xmlns:if="ant:if">
+	
+	<target name="configure.it" description="Prepare the IDE for tests">
+		<!-- We use a "mark" file. If the file exists, we perfom an upgrade. Otherwise, a simple install. -->
+		<available file="${project.build.directory}/../../tests-execution-installer/target/eclipse/.marqueur" property="perform.update" />
+		<antcall target="install.all" unless:true="${perform.update}" />
+		<antcall target="update" if:true="${perform.update}" />
+	</target>
+	
+	
+	<!-- 
+		Install the required features:
+			
+		* SWT Bot.
+		* The tests plug-in.
+	-->
+	<target name="install.all" description="Install SWT Bot and the tests plug-in">
+
+		<!-- SWT Bot -->
+		<ant antfile="ant/library.xml" target="install-plugins">
+			<property name="log.file.name" value="output.ide.installation.swtbot" />
+			<property name="eclipse.home" value="${project.build.directory}/../../tests-execution-installer/target/eclipse" />
+			<property name="eclipse.repositories" value="${ant.repos}" />
+			<property name="eclipse.features" value="org.eclipse.swtbot.eclipse.feature.group,org.eclipse.swtbot.feature.group,org.eclipse.swtbot.eclipse.test.junit.feature.group" />
+		</ant>
+				
+		<!-- Tests feature -->
+		<ant antfile="ant/library.xml" target="install-plugins">
+			<property name="log.file.name" value="output.ide.installation.test-feature" />
+			<property name="eclipse.home" value="${project.build.directory}/../../tests-execution-installer/target/eclipse" />
+			<property name="eclipse.repositories" value="${org.p2.location}" />
+			<property name="eclipse.features" value="net.vzurczak.eclipse.tests.ide.feature.feature.group" />
+		</ant>
+		
+		<!-- Create the "mark" file -->
+		<echo message="Added by the build (IDE configuration)" file="${project.build.directory}/../../tests-execution-installer/target/eclipse/.marqueur" />
+	</target>
+	
+	
+	<!-- 
+		Reconfigure the IDE for tests:
+				
+		* Uninstall the test feature.
+		* Reinstall the new version.
+	-->
+	<target name="update" description="Upgrade the test plug-in">
+					
+		<!-- Reinstall the tests feature -->
+		<ant antfile="ant/library.xml" target="install-plugins">
+			<property name="log.file.name" value="output.ide.installation.test-feature" />
+			<property name="eclipse.home" value="${project.build.directory}/../../tests-execution-installer/target/eclipse" />
+			<property name="perform.update" value="true" if:true="${perform.update}" />
+			<property name="eclipse.repositories" value="${org.p2.location}" />
+			<property name="eclipse.features" value="net.vzurczak.eclipse.tests.ide.feature.feature.group" />
+		</ant>
+	</target>
+
+</project>

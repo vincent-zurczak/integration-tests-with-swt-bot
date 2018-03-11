@@ -1,0 +1,53 @@
+<project
+		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" 
+		xmlns="http://maven.apache.org/POM/4.0.0" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>net.vzurczak.integration.tests.with.swt.bot</groupId>
+		<artifactId>parent</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+		<relativePath>../../pom.xml</relativePath>
+	</parent>
+	
+	<artifactId>tests-execution-ide</artifactId>
+	<packaging>jar</packaging>
+	<name>Tests Execution :: Automated Tests for the IDE</name>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+
+                    <execution>
+                        <id>test-eclipse</id>
+                        <phase>integration-test</phase>
+                        <configuration>
+                            <target>
+                                <!-- 
+                                SVN identifiers can be passed through Maven or through environment variables.
+                                The ANT script is in charge of determining what to pass to the tests.
+                                -->
+                                <property name="ant.svn.user" value="${svn.user}" />                                
+                                <property name="ant.svn.password" value="${svn.password}" />
+                                <property name="ant.test.class.name" value="${test.suite}" />
+                                
+                                <!-- Invoke the ANT script -->
+                                <ant antfile="${basedir}/ant/build.test.ide.xml" target="test.it.all" />
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+	
+</project>

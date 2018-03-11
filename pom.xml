@@ -1,0 +1,211 @@
+<project
+		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" 
+		xmlns="http://maven.apache.org/POM/4.0.0" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<modelVersion>4.0.0</modelVersion>
+	
+	<groupId>net.vzurczak.integration.tests.with.swt.bot</groupId>
+	<artifactId>parent</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>Integration Tests with SWT Bot</name>
+
+	<properties>
+	
+		<!-- Basic properties -->
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<java.compiler.version>1.7</java.compiler.version>
+		<tycho.version>1.0.0</tycho.version>
+
+		<!-- Properties used directly / indirectly in ANT scripts -->
+		<eclipse.version.alias>oxygen</eclipse.version.alias>
+		<maven.setups.location></maven.setups.location>
+		<maven.installer.location></maven.installer.location>
+	
+	</properties>
+	
+	<!-- Maven build configuration -->
+	<build>
+	
+		<plugins>
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-packaging-plugin</artifactId>
+				<version>${tycho.version}</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-compiler-plugin</artifactId>
+				<version>${tycho.version}</version>
+				<configuration>
+					<useProjectSettings>false</useProjectSettings>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-maven-plugin</artifactId>
+				<version>${tycho.version}</version>
+				<extensions>true</extensions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>tycho-source-plugin</artifactId>
+				<version>${tycho.version}</version>
+				<executions>
+					<execution>
+						<id>attach-source</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>plugin-source</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.eclipse.tycho</groupId>
+				<artifactId>target-platform-configuration</artifactId>
+				<version>${tycho.version}</version>
+				<configuration>
+					<environments>
+
+						<!-- Win 32 -->
+						<environment>
+							<os>win32</os>
+							<ws>win32</ws>
+							<arch>x86</arch>
+						</environment>
+						<environment>
+							<os>win32</os>
+							<ws>win32</ws>
+							<arch>x86_64</arch>
+						</environment>
+
+						<!-- Linux -->
+						<environment>
+							<os>linux</os>
+							<ws>gtk</ws>
+							<arch>x86</arch>
+						</environment>
+						<environment>
+							<os>linux</os>
+							<ws>gtk</ws>
+							<arch>x86_64</arch>
+						</environment>
+
+					</environments>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	
+	
+	<!-- Profiles to parameterize the build -->
+	<profiles>
+	
+		<!-- 
+			Dependency management
+			(this profile can be duplicated / adapted for an internal environment
+			where Eclipse repositories were mirrored / proxyfied).
+		-->
+		<profile>
+			<id>internet</id>
+			<properties>
+				<ant.repos>http://download.eclipse.org/technology/swtbot/releases/latest/,http://download.eclipse.org/releases/${eclipse.version.alias}</ant.repos>
+			</properties>
+
+			<repositories>
+				<repository>
+					<id>eclipse.org</id>
+					<url>http://download.eclipse.org/releases/${eclipse.version.alias}</url>
+					<layout>p2</layout>
+				</repository>
+				
+				<repository>
+					<id>orbit</id>
+					<url>http://download.eclipse.org/tools/orbit/downloads/drops/R20170818183741/repository/</url>
+					<layout>p2</layout>
+				</repository>
+				
+				<repository>
+					<id>swtbot</id>
+					<url>http://download.eclipse.org/technology/swtbot/releases/latest/</url>
+					<layout>p2</layout>
+				</repository>
+			</repositories>
+		</profile>		
+
+		<!-- A profile to setup the tests. -->
+		<profile>
+			<id>setup-tests</id>
+			<modules>
+				<!-- plug-ins -->
+				<module>test-plugins/net.vzurczak.eclipse.tests.installer</module>
+				<module>test-plugins/net.vzurczak.eclipse.tests.ide</module>
+				
+				<!-- features -->
+				<module>test-features/net.vzurczak.eclipse.tests.installer.feature</module>
+				<module>test-features/net.vzurczak.eclipse.tests.ide.feature</module>
+				
+				<!--  update site -->
+				<module>test-update-site</module>
+		
+				<!-- Test the installer and prepare the new Eclipse IDE -->
+				<module>tests-execution/tests-execution-installer</module>
+				<module>tests-execution/tests-configuration-ide</module>
+			</modules>
+		</profile>
+		
+		<!-- 
+			Recompile tests for the newly installed IDE and reinstall them in it
+			(without deleting the workspace !). This is a profile to ease the development
+			of these tests (since we cannot launch them from a workspace).
+		-->
+		<profile>
+			<id>recompile-ide-tests</id>
+			<modules>
+				<module>test-plugins/net.vzurczak.eclipse.tests.ide</module>
+				<module>test-features/net.vzurczak.eclipse.tests.ide.feature</module>
+				<module>test-update-site</module>
+				<module>tests-execution/tests-configuration-ide</module>
+			</modules>
+		</profile>
+		
+		<!-- This profile executes the tests for the scenario 1. -->
+        <profile>
+            <id>tests-for-scenario-1</id>
+            <properties>
+                <test.suite>SvnMultiModulesTests</test.suite>
+            </properties>
+            
+            <modules>
+            	<module>tests-execution/tests-execution-ide</module>
+			</modules>
+        </profile>
+
+        <!-- This profile would execute the tests for the scenario 2. -->
+        <!-- 
+        <profile>
+            <id>tests-for-scenario-2</id>
+            <properties>
+                <test.suite>Scenario2Tests</test.suite>
+            </properties>
+            
+            <modules>
+            	<module>tests-execution/tests-execution-ide</module>
+			</modules>
+        </profile>
+        -->
+        <!--
+        	You can create as many scenarios as you wish.
+        	Each one corresponds to a single SWT Bot test, made up of
+        	several complex steps.
+        -->
+	</profiles>
+	
+</project>

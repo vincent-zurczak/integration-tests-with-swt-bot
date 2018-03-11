@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:unless="ant:unless" xmlns:if="ant:if">
+	
+	<!-- Main task -->
+	<target name="test.it.all" description="Executes IDE tests">		
+		<antcall target="run" />
+	</target>
+
+	
+	<!-- Launch the tests. -->
+	<target name="run" description="Lance les tests">
+		<antcall target="execute-tests-ide">
+			<param name="log.file.name" value="output.ide.tests.execution" />
+			<param name="eclipse.home" value="${project.build.directory}/../../tests-execution-installer/target/eclipse" />
+		</antcall>
+	</target>
+	
+	
+	<!--
+		Tests execution for the IDE.
+				
+		Parameters:
+		* eclipse.home: Eclipse location.
+		* log.file.name: the suffix for the log file name.
+	-->
+	<target name="execute-tests-ide">
+			
+		<!-- Find the launcher's JAR -->
+		<first id="launcher.jar.location">
+			<fileset dir="${eclipse.home}/plugins" includes="org.eclipse.equinox.launcher_*.jar" />
+		</first>
+			
+		<!-- Prepare the tests and their results -->
+		<delete dir="${eclipse.home}/../junit" failonerror="false" />
+		<mkdir dir="${eclipse.home}/../junit" />
+		
+		<!-- Clean the workspace -->
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${eclipse.home}/workspace" defaultexcludes="false">
+				<include name="**/*" />
+				<include name="**/.svn/" />
+				<exclude name=".metadata/.plugins/org.eclipse.oomph.setup/*" />
+			</fileset>	
+		</delete>
+
+		<!--
+			Extract OOMPH parameters from the « eclipse.ini » file.
+			They are important, they manage the behavior of OOMPH in this work space.
+		-->
+		<loadfile encoding="UTF-8" property="extra.props.for.oomph" srcFile="${eclipse.home}/eclipse.ini">
+			<filterchain>
+				<tokenfilter>
+					<containsregex pattern="(-D[^\n]+)" replace="\1" />
+				</tokenfilter>
+			</filterchain>
+		</loadfile>
+				
+		<!--
+			All the "-D" properties were extracted. However, there is one property per line.
+			We gather them on a single line.
+		-->
+		<script language="javascript">
+		    var before = project.getProperty("extra.props.for.oomph");
+		    project.setProperty("extra.props.for.oomph", before.replaceAll("\n", " "));
+		</script>
+		<echo message="Parameters extracted from the eclipse.ini file:${line.separator}${extra.props.for.oomph}" />
+			
+		<!-- Launch the tests -->
+		<echo message="Executing SWT Bot tests (Linux GTK x64)..." />
+		<java 
+				dir="${eclipse.home}"
+				fork="true" 
+				jar="${toString:launcher.jar.location}" 
+				output="${eclipse.home}/../${log.file.name}.txt"
+				logError="true"
+				failonerror="true">
+						
+			<jvmarg line="-Xms256M -Xmx768M" />
+			<jvmarg line="${extra.props.for.oomph}" />
+			
+			<env key="org_svn_user" value="${svn.user}" if:set="svn.user" />
+			<env key="org_svn_password" value="${svn.password}" if:set="svn.password" />
+
+			<arg value="-os" />
+			<arg value="linux" />
+			<arg value="-ws" />
+			<arg value="gtk" />
+			<arg value="-arch" />
+			<arg value="x86_64" />
+				
+			<arg value="-application" />
+			<arg value="org.eclipse.swtbot.eclipse.junit.headless.swtbottestapplication" />
+				
+			<arg value="-testApplication" />
+			<arg value="org.eclipse.ui.ide.workbench" />
+				
+			<arg value="-testPluginName" />
+			<arg value="net.vzurczak.eclipse.tests.ide" />
+				
+			<arg value="formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,${eclipse.home}/../junit/AllTests.xml" />
+			<arg value="formatter=org.apache.tools.ant.taskdefs.optional.junit.PlainJUnitResultFormatter,${eclipse.home}/../junit/AllTests.txt" />
+				
+			<arg value="-classname" />
+			<arg value="net.vzurczak.eclipse.tests.ide.suites.${test.suite}" />
+			
+			<arg value="-data" />
+			<arg value="${eclipse.home}/workspace" />
+			
+			<arg value="-consoleLog" />
+			<arg value="-debug" />
+		</java>
+		
+		<!-- Copy the screenshots created by SWT Bot -->
+		<move file="${eclipse.home}/screenshots" todir="${eclipse.home}/../junit/" failonerror="false" />
+
+		<!-- Display tests results -->
+		<loadfile property="junit.message" srcFile="${eclipse.home}/../junit/AllTests.txt" />
+		<echo message="${junit.message}" />
+		<fail message="Des tests ont échoué pour l'IDE">
+			<condition>
+				<or>
+					<resourcecontains resource="${eclipse.home}/../junit/AllTests.txt" substring="Testcase: fail" />
+					<resourcecontains resource="${eclipse.home}/../junit/AllTests.txt" substring="Caused an ERROR" />
+				</or>
+			</condition>
+		</fail>
+	</target>
+
+</project>

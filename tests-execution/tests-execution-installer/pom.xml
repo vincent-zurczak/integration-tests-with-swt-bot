@@ -1,0 +1,47 @@
+<project
+		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" 
+		xmlns="http://maven.apache.org/POM/4.0.0" 
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>net.vzurczak.integration.tests.with.swt.bot</groupId>
+		<artifactId>parent</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+		<relativePath>../../pom.xml</relativePath>
+	</parent>
+	
+	<artifactId>tests-execution-installer</artifactId>
+	<packaging>jar</packaging>
+	<name>Tests Execution :: Automated Tests for the Installer</name>
+	
+	<properties>
+		<org.p2.location>file:${project.basedir}/../../test-update-site/target/repository</org.p2.location>
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<version>1.8</version>
+				<executions>
+					
+					<execution>
+						<id>test-installer</id>
+						<phase>integration-test</phase>
+						<configuration>
+							<target>
+								<ant antfile="${basedir}/ant/build.test.installer.xml" target="test.it.all" />
+							</target>
+						</configuration>
+						<goals>
+							<goal>run</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+	
+</project>

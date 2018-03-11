@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:unless="ant:unless" xmlns:if="ant:if">
+	
+	<!-- The main task -->
+	<target name="test.it.all" description="Lance les tests de l'installateur">
+		<antcall target="prepare" />
+		<antcall target="run" />
+	</target>
+	
+	
+	<!-- 
+		Prepare the install for tests:
+		
+		* Get the installer.
+		* Extract it.
+		* Update the *.setups location (depending on whether we test an official catalog or a snapshot one).
+		* Install SWT Bot.
+		* Install the tests feature.
+	-->
+	<target name="prepare" description="Prepare the setup">
+		
+		<!-- Download and extraction -->
+		<condition property="is.tar.gz">
+			<matches pattern=".*\.tar\.gz$" string="${maven.installer.location}" />
+		</condition>
+		<echo message="${maven.installer.location}" />
+		<echo message="Processing started for a tar.gz archive." if:true="${is.tar.gz}" />
+		<echo message="Processing started for a zip archive." unless:true="${is.tar.gz}" />
+		
+		<mkdir dir="target" />
+		<get src="${maven.installer.location}" dest="target/eclipse-installer.tar.gz" skipexisting="true" if:true="${is.tar.gz}" />
+		<untar src="target/eclipse-installer.tar.gz" dest="target/eclipse-installer" compression="gzip" if:true="${is.tar.gz}" />
+		
+		<get src="${maven.installer.location}" dest="target/eclipse-installer.zip" skipexisting="true" unless:true="${is.tar.gz}" />
+		<unzip src="target/eclipse-installer.zip" dest="target/eclipse-installer" unless:true="${is.tar.gz}" />
+		
+		<!-- Configuration update -->
+		<replaceregexp
+			file="target/eclipse-installer/eclipse-inst.ini"
+			match="-Doomph\.redirection\.setups=.*"
+			replace="-Doomph.redirection.setups=index:/->${maven.setups.location}" />
+		
+		<!-- Install SWT Bot -->
+		<ant antfile="ant/library.xml" target="install-plugins">
+			<property name="log.file.name" value="output.installer.installation.swtbot" />
+			<property name="eclipse.home" value="${project.build.directory}/eclipse-installer" />
+			<property name="eclipse.repositories" value="${ant.repos}" />
+			<property name="eclipse.features" value="org.eclipse.swtbot.eclipse.feature.group,org.eclipse.swtbot.feature.group,org.eclipse.swtbot.eclipse.test.junit.feature.group" />
+		</ant>
+		
+		<!-- Install the tests feature -->
+		<ant antfile="ant/library.xml" target="install-plugins">
+			<property name="log.file.name" value="output.installer.installation.test-feature" />
+			<property name="eclipse.home" value="${project.build.directory}/eclipse-installer" />
+			<property name="eclipse.repositories" value="${org.p2.location}" />
+			<property name="eclipse.features" value="net.vzurczak.eclipse.tests.installer.feature.feature.group" />
+		</ant>
+	</target>
+	
+	
+	<!-- Launch the tests. -->
+	<target name="run" description="Launch the tests">
+		<antcall target="execute-tests-installer">
+			<param name="log.file.name" value="output.installer.tests.execution" />
+			<param name="eclipse.home" value="${project.build.directory}/eclipse-installer" />
+		</antcall>
+	</target>
+	
+	
+	<!--
+		Execute tests for the OOMPH installer.
+		
+		Parameters:
+		* eclipse.home: Eclipse location.
+		* log.file.name: the suffic for the log file name.
+	-->
+	<target name="execute-tests-installer">
+			
+		<!--
+			Extract parameters from the « eclipse.ini » file.
+			In fact, we launch our own SWT Bot application. It is in charge of starting the installer.
+			Some of the parameters in the « eclipse.ini » file are system properties and are passed
+			to the JVM. So, we pass them at the beginning and OOMPH will decide what to pick up.
+		-->
+		<loadfile encoding="UTF-8" property="extra.props.for.oomph" srcFile="${eclipse.home}/eclipse-inst.ini">
+			<filterchain>
+				<tokenfilter>
+					<containsregex pattern="(-D[^\n]+)" replace="\1" />
+				</tokenfilter>
+			</filterchain>
+		</loadfile>
+		
+		<!--
+			All the "-D" properties were extracted. However, there is one property per line.
+			We gather them on a single line.
+		-->
+		<script language="javascript">
+		    var before = project.getProperty("extra.props.for.oomph");
+		    project.setProperty("extra.props.for.oomph", before.replaceAll("\n", " "));
+		</script>
+		<echo message="Paramètres extraits du fichier eclipse-inst.ini:${line.separator}${extra.props.for.oomph}" />
+			
+		<!-- Find the launcher's JAR -->
+		<first id="launcher.jar.location">
+			<fileset dir="${eclipse.home}/plugins" includes="org.eclipse.equinox.launcher_*.jar" />
+		</first>
+		
+		<!-- Prepare the tests and their results -->
+		<delete dir="${eclipse.home}/../junit" failonerror="false" />
+		<mkdir dir="${eclipse.home}/../junit" />
+		<delete dir="${eclipse.home}/../eclipse" failonerror="false" />
+			
+		<!-- Purge OOMPH's cache -->
+		<echo message="Purge du cache de OOMPH..." />
+		<delete dir="${user.home}/.eclipse/org.eclipse.oomph.jreinfo" failonerror="false" />
+		<delete dir="${user.home}/.eclipse/org.eclipse.oomph.p2" failonerror="false" />
+		<delete dir="${user.home}/.eclipse/org.eclipse.oomph.setup" failonerror="false" />
+			
+		<!-- Launch the tests -->
+		<echo message="Executing SWT Bot tests (Linux GTK x64)..." />
+		<java 
+				dir="${eclipse.home}"
+				fork="true" 
+				jar="${toString:launcher.jar.location}" 
+				output="${eclipse.home}/../${log.file.name}.txt"
+				logError="true"
+				failonerror="true">
+				
+			<jvmarg line="-Xms256M -Xmx768M" />
+			<jvmarg line="${extra.props.for.oomph}" />
+		
+			<arg value="-os" />
+			<arg value="linux" />
+			<arg value="-ws" />
+			<arg value="gtk" />
+			<arg value="-arch" />
+			<arg value="x86_64" />
+				
+			<arg value="-application" />
+			<arg value="net.vzurczak.eclipse.tests.installer.test-application" />
+				
+			<arg value="-testPluginName" />
+			<arg value="net.vzurczak.eclipse.tests.installer" />
+				
+			<arg value="formatter=org.apache.tools.ant.taskdefs.optional.junit.XMLJUnitResultFormatter,${eclipse.home}/../junit/AllTests.xml" />
+			<arg value="formatter=org.apache.tools.ant.taskdefs.optional.junit.PlainJUnitResultFormatter,${eclipse.home}/../junit/AllTests.txt" />
+				
+			<arg value="-classname" />
+			<arg value="net.vzurczak.eclipse.tests.installer.tests.AllTests" />
+				
+			<arg value="-data" />
+			<arg value="@noDefault" />
+			
+			<arg value="-consoleLog" />
+			<arg value="-debug" />
+		</java>
+
+		<!-- Copy the screenshots created by SWT Bot -->
+		<move file="${eclipse.home}/screenshots" todir="${eclipse.home}/../junit/" failonerror="false" />
+			
+		<!-- Display tests results -->
+		<loadfile property="junit.message" srcFile="${eclipse.home}/../junit/AllTests.txt" />
+		<echo message="${junit.message}" />
+		<fail message="Des tests ont échoué pour l'installateur.">
+			<condition>
+				<or>
+					<resourcecontains resource="${eclipse.home}/../junit/AllTests.txt" substring="Testcase: fail" />
+					<resourcecontains resource="${eclipse.home}/../junit/AllTests.txt" substring="Caused an ERROR" />
+				</or>
+			</condition>
+		</fail>
+	</target>
+
+</project>
