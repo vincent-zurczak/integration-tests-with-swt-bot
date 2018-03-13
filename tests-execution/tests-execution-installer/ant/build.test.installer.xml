@@ -38,7 +38,8 @@
 		<replaceregexp
 			file="target/eclipse-installer/eclipse-inst.ini"
 			match="-Doomph\.redirection\.setups=.*"
-			replace="-Doomph.redirection.setups=index:/->${maven.setups.location}" />
+			replace="-Doomph.redirection.setups=index:/->${maven.setups.location}"
+			unless:blank="${maven.setups.location}" />
 		
 		<!-- Install SWT Bot -->
 		<ant antfile="ant/library.xml" target="install-plugins">
