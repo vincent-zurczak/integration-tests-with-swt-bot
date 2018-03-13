@@ -1,5 +1,8 @@
 # Integration Tests with SWT Bot
 
+> This project is part of resources for [this blog article]
+(https://vzurczak.wordpress.com/2018/03/13/testing-eclipses-user-workflows-from-oomph-to-subversive-m2e-and-wtp/).
+
 A multi-module project that demonstrates the use Maven, ANT and
 SWT Bot for integration tests about Eclipse tools. They verify the Eclipse
 installer (OOMPH) and various tools, including Subversive, m2e, WTP, through
